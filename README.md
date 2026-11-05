@@ -73,6 +73,8 @@ Field names are kept in French, as in the Retell configuration.
 
 ### 1. Summary SMS after every call
 
+![n8n workflow: summary SMS](n8n-sms-resume.png)
+
 File: [`workflows/retell-sms-resume.sanitized.json`](workflows/retell-sms-resume.sanitized.json), with no personal data or credentials.
 
 1. Import the file into n8n.
@@ -82,6 +84,8 @@ File: [`workflows/retell-sms-resume.sanitized.json`](workflows/retell-sms-resume
 5. Restrict the webhook to the `call_analyzed` event.
 
 ### 2. Weekly improvement report
+
+![n8n workflow: weekly report](n8n-rapport-hebdo.png)
 
 File: [`workflows/rapport-hebdo-agent-vocal.json`](workflows/rapport-hebdo-agent-vocal.json).
 
