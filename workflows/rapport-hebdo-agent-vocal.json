@@ -1,0 +1,436 @@
+{
+  "name": "Agent vocal - Rapport hebdo d'amélioration",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Rapport hebdo agent vocal\n**Avant de lancer :**\n1. Nœud Config : renseigner `agent_id` (Retell) et `email_destinataire`.\n2. Credentials : Retell (Header Auth, Name `Authorization`, Value `Bearer VOTRE_CLE`, à choisir dans les 2 nœuds Retell), OpenAI (credential OpenAI déjà existant), Gmail OAuth2.\n3. Tester avec « Test manuel » sur 7 jours.\n\nSi aucun appel avec transcription sur la période, le workflow s'arrête sans envoyer d'email.",
+        "height": 260,
+        "width": 460
+      },
+      "id": "bdc68594-cff9-4ca5-b76b-94ff1814c40f",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -420
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ee5629fc-67f5-4ee5-bc50-250136f8e88f",
+      "name": "Test manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "8572d7f7-eae1-4843-bc60-3fb3258eae56",
+      "name": "Chaque lundi 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "efa0809b-b657-4935-b995-25e9646eb0d6",
+              "name": "agent_id",
+              "value": "REMPLACER_PAR_AGENT_ID_RETELL",
+              "type": "string"
+            },
+            {
+              "id": "86f8839e-7479-4e50-96d2-6d1ed9404691",
+              "name": "nom_client",
+              "value": "Martin Chauffage",
+              "type": "string"
+            },
+            {
+              "id": "2ef7d530-5b32-4c26-80c5-5e7ac991eafc",
+              "name": "email_destinataire",
+              "value": "REMPLACER_PAR_TON_EMAIL",
+              "type": "string"
+            },
+            {
+              "id": "34adf779-1987-4136-ab22-e1569e77f0c9",
+              "name": "jours",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "9024078b-947d-4674-aebe-e97efc8ec87a",
+              "name": "modele_appel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "838419c1-feac-456e-a917-e42acad01ef4",
+              "name": "modele_synthese",
+              "value": "gpt-4o",
+              "type": "string"
+            },
+            {
+              "id": "a25b887f-6c0f-4e6e-87a5-6a1c4208aed7",
+              "name": "prompt_analyse",
+              "value": "Tu audites des appels d'une assistante vocale IA (Léa, standard téléphonique d'un chauffagiste). Tu fais DEUX analyses de la même transcription : une analyse technique du comportement de l'assistante, et une analyse client (qui appelle, pourquoi, avec quelle valeur commerciale). Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte autour.\nSchéma : {\"resume\": string (1 phrase), \"technique\": {\"objectif_atteint\": boolean (l'appelant a obtenu ce qu'il voulait : rendez-vous, message transmis ou transfert), \"problemes\": [{\"type\": \"boucle\" | \"invention\" | \"question_ignoree\" | \"coupure_trop_tot\" | \"mauvaise_comprehension\" | \"ton\" | \"autre\", \"gravite\": 1 | 2 | 3, \"detail\": string, \"extrait\": string (citation courte)}]}, \"client\": {\"motif\": \"urgence_fuite\" | \"panne_chauffage\" | \"entretien\" | \"devis\" | \"remplacement\" | \"facture\" | \"renseignement\" | \"demarchage\" | \"autre\", \"urgence\": \"danger\" | \"urgent\" | \"normal\", \"ville\": string ou null (ville ou code postal cité), \"questions\": [{\"theme\": \"prix\" | \"zone\" | \"delai\" | \"horaires\" | \"garantie\" | \"autre\", \"texte\": string (la question de l'appelant, reformulée)}], \"valeur_commerciale\": \"forte\" | \"moyenne\" | \"faible\" | \"nulle\" (forte = remplacement de chaudière, devis important, contrat d'entretien ; nulle = démarchage, erreur), \"frein\": string ou null (objection, frustration ou hésitation exprimée par l'appelant), \"ressenti\": \"satisfait\" | \"neutre\" | \"frustre\" | \"inquiet\" | \"presse\", \"suite_a_donner\": \"rappeler_vite\" | \"rdv_pris\" | \"message_a_traiter\" | \"aucune\"}}\nDéfinitions des problèmes techniques : boucle = l'agent redemande une information déjà donnée ou répète la même phrase ; invention = l'agent affirme un fait qu'il ne peut pas connaître (zone d'intervention, prix, horaires, délai) ; question_ignoree = l'appelant pose une question et l'agent n'y répond pas ; coupure_trop_tot = l'agent termine ou l'appelant raccroche alors que la demande n'est pas traitée ; mauvaise_comprehension = l'agent comprend de travers (nom, adresse, motif) ; ton = formulation froide, robotique ou inadaptée à l'urgence. Gravité : 3 = l'appelant est mal servi ou l'agent dit quelque chose de faux ; 2 = gêne notable ; 1 = détail.\nSi l'appel est parfait côté technique, renvoie problemes: []. Ne note rien qui ne soit pas dans la transcription ; si une information client est absente, mets null ou une liste vide.\nRègle de référence : quand l'appelant demande un prix, la réponse correcte de l'agent est de dire qu'un technicien établit un devis après avoir vu la situation. Ce n'est PAS une question ignorée. De même, répondre \"je ne peux pas vous le confirmer, le technicien vous répondra\" à une question sur la zone ou les horaires est correct. Ne signale un problème que si l'agent ne répond pas du tout ou répond autre chose.",
+              "type": "string"
+            },
+            {
+              "id": "34bb1427-416c-4137-94eb-d1d724a3b906",
+              "name": "prompt_synthese",
+              "value": "Tu es à la fois auditeur d'assistants vocaux IA et consultant marketing pour une TPE. Tu reçois des statistiques et l'analyse de chaque appel de la période pour Léa, assistante d'un chauffagiste, construite sur Retell AI en Conversation Flow. Nœuds du flow : Accueil et Tri, Danger, Urgence collecte, Transfert technicien, Message, Rendez-vous agenda, End Call. Il existe aussi un Global Prompt.\nRéponds UNIQUEMENT avec un objet JSON valide : {\"resume\": string (3 phrases max, technique et clients), \"technique\": {\"points_forts\": [string], \"problemes\": [{\"titre\": string, \"nb_appels\": number, \"gravite\": 1 | 2 | 3, \"exemple_call_id\": string, \"noeud\": string (nœud ou Global Prompt à modifier), \"correction_prompt\": string (texte exact à ajouter ou remplacer, en français, prêt à coller)}]}, \"marketing\": {\"profil_clients\": string (qui appelle et pourquoi, 2 à 3 phrases), \"demandes_principales\": [{\"motif\": string, \"nb_appels\": number}], \"questions_frequentes\": [{\"question\": string, \"nb_appels\": number, \"reponse_suggeree\": string}], \"opportunites\": [{\"description\": string, \"call_id\": string}], \"freins\": [string], \"recommandations\": [{\"action\": string, \"pourquoi\": string}]}}\nTechnique : regroupe les problèmes similaires, trie par gravité puis fréquence, 5 maximum, uniquement s'ils sont justifiés par au moins un appel. Marketing : base-toi uniquement sur les appels analysés. Pour chaque question fréquente, propose une réponse à publier (site, fiche Google, FAQ ou prompt de l'agent) mais n'invente JAMAIS un prix, une zone ou un horaire : écris alors [à valider avec le client]. Les opportunités sont les appels à forte valeur commerciale à rappeler. Donne 3 recommandations marketing concrètes au maximum (offre, site, horaires, relance, avis). S'il y a moins de 5 appels, précise dans resume que l'échantillon est trop petit pour conclure.\nContexte : les règles suivantes sont DÉJÀ en place dans l'agent, ne les propose pas comme correction : l'agent ne donne jamais de prix, de zone d'intervention ni d'horaire (il répond qu'un technicien établit un devis ou qu'il vous répondra) ; il ne redemande pas une information déjà donnée ; il annonce le transfert avant de transférer ; il dit au revoir une seule fois. Ne recommande jamais de donner des tarifs, de confirmer une zone ou des horaires : ces informations viennent du client, pas de l'IA. Ne propose une correction que si l'appel analysé montre ce problème malgré ces règles.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f9db4145-e327-4ae8-b13d-e22ac64fed30",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.retellai.com/v3/list-calls",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter_criteria: { agent: [ { agent_id: $json.agent_id } ], start_timestamp: { type: 'number', op: 'ge', value: Date.now() - $json.jours * 86400000 } }, sort_order: 'descending', limit: 200 }) }}",
+        "options": {}
+      },
+      "id": "edfbd122-5cb2-45ee-87a8-3ad7281d809c",
+      "name": "Retell - List Calls",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "id": "45742e3f-2721-42c1-91ea-06aeccac2867",
+      "name": "Un item par appel",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.retellai.com/v2/get-call/{{ $json.call_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 500
+            }
+          }
+        }
+      },
+      "id": "89953f85-6df1-4828-9826-263a938ace01",
+      "name": "Retell - Get Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Numéro de la première version de l'agent à analyser (1 = tous les appels)\nconst VERSION_MIN = 1;\n\nconst calls = $input.all()\n  .map(i => i.json)\n  .filter(c => c.transcript && c.transcript.trim().length > 0)\n  .filter(c => (c.agent_version || VERSION_MIN) >= VERSION_MIN);\n\nreturn calls.map(c => ({ json: {\n  call_id: c.call_id,\n  date: new Date(c.start_timestamp).toISOString(),\n  duree_s: Math.round((c.duration_ms || 0) / 1000),\n  fin: c.disconnection_reason || 'inconnu',\n  sentiment: (c.call_analysis && c.call_analysis.user_sentiment) || 'inconnu',\n  type_appel: (c.call_analysis && c.call_analysis.custom_analysis_data && c.call_analysis.custom_analysis_data.type_appel) || 'inconnu',\n  canal: c.call_type || 'inconnu',\n  transcript: c.transcript\n} }));"
+      },
+      "id": "7fbc9445-5d8c-4e6c-a725-5032159a7535",
+      "name": "Préparer les appels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.modele_appel, max_completion_tokens: 1500, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: $('Config').first().json.prompt_analyse }, { role: 'user', content: 'Transcription :\\n' + $json.transcript } ] }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "id": "dc433a2e-9d3d-42a7-82d8-fd6e19ad5fa6",
+      "name": "OpenAI - Analyse par appel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Préparer les appels').all();\n\nreturn $input.all().map((item, i) => {\n  const meta = { ...base[i].json };\n  delete meta.transcript;\n  let a = {};\n  try {\n    const txt = (item.json.choices && item.json.choices[0] && item.json.choices[0].message && item.json.choices[0].message.content) || '';\n    const m = txt.match(/\\{[\\s\\S]*\\}/);\n    if (m) a = JSON.parse(m[0]);\n  } catch (e) {\n    a = {};\n  }\n  const t = a.technique || {};\n  const c = a.client || {};\n  return { json: {\n    ...meta,\n    resume: a.resume || 'Analyse indisponible',\n    objectif_atteint: t.objectif_atteint === undefined ? null : t.objectif_atteint,\n    problemes: t.problemes || [],\n    client: {\n      motif: c.motif || 'inconnu',\n      urgence: c.urgence || 'inconnu',\n      ville: c.ville || null,\n      questions: c.questions || [],\n      valeur_commerciale: c.valeur_commerciale || 'inconnue',\n      frein: c.frein || null,\n      ressenti: c.ressenti || 'inconnu',\n      suite_a_donner: c.suite_a_donner || 'inconnue'\n    }\n  } };\n});"
+      },
+      "id": "83462686-6d82-486e-862b-81c6f81523f6",
+      "name": "Lire les analyses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const calls = $input.all().map(i => i.json);\nconst n = calls.length;\n\nconst cnt = (fn) => calls.reduce((acc, c) => {\n  const v = fn(c) || 'inconnu';\n  acc[v] = (acc[v] || 0) + 1;\n  return acc;\n}, {});\n\nconst problemes = {};\nconst themes = {};\nfor (const c of calls) {\n  for (const p of (c.problemes || [])) problemes[p.type] = (problemes[p.type] || 0) + 1;\n  for (const q of ((c.client && c.client.questions) || [])) themes[q.theme || 'autre'] = (themes[q.theme || 'autre'] || 0) + 1;\n}\n\nconst stats = {\n  nb_appels: n,\n  duree_moyenne_s: n ? Math.round(calls.reduce((s, c) => s + (c.duree_s || 0), 0) / n) : 0,\n  objectif_atteint: calls.filter(c => c.objectif_atteint === true).length,\n  raccroche_par_appelant: calls.filter(c => c.fin === 'user_hangup').length,\n  opportunites_fortes: calls.filter(c => c.client && c.client.valeur_commerciale === 'forte').length,\n  par_type_appel: cnt(c => c.type_appel),\n  par_fin: cnt(c => c.fin),\n  par_probleme: problemes,\n  par_motif: cnt(c => c.client && c.client.motif),\n  par_urgence: cnt(c => c.client && c.client.urgence),\n  par_ville: cnt(c => c.client && c.client.ville),\n  par_theme_question: themes,\n  par_ressenti: cnt(c => c.client && c.client.ressenti),\n  par_heure_paris: cnt(c => new Date(c.date).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }).replace(/\\D/g, '') + 'h')\n};\n\nreturn [{ json: { stats, analyses: calls } }];"
+      },
+      "id": "11299d07-5fd6-43f0-b13b-d1e77d7a8ede",
+      "name": "Regrouper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.modele_synthese, max_completion_tokens: 5000, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: $('Config').first().json.prompt_synthese }, { role: 'user', content: JSON.stringify({ stats: $json.stats, appels: $json.analyses }) } ] }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "0a21b435-cb8d-4a09-a451-97ebbb86ccfa",
+      "name": "OpenAI - Synthèse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = ($input.first().json.choices && $input.first().json.choices[0] && $input.first().json.choices[0].message && $input.first().json.choices[0].message.content) || '';\nlet r = { resume: 'Synthèse indisponible.', technique: {}, marketing: {} };\ntry {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) r = JSON.parse(m[0]);\n} catch (e) {}\n\nconst s = $('Regrouper').first().json.stats;\nconst cfg = $('Config').first().json;\nconst esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst gravite = { 1: 'Mineur', 2: 'Moyen', 3: 'Grave' };\nconst ul = (arr) => (arr && arr.length) ? '<ul>' + arr.map(x => '<li>' + x + '</li>').join('') + '</ul>' : '';\nconst t = r.technique || {};\nconst mk = r.marketing || {};\n\nconst forts = ul((t.points_forts || []).map(esc));\nconst problemes = (t.problemes || []).map(p =>\n  '<h3>' + esc(p.titre) + ' <small>(' + (gravite[p.gravite] || '') + ', ' + esc(p.nb_appels) + ' appel(s))</small></h3>' +\n  '<p><b>À modifier :</b> ' + esc(p.noeud) + '<br><b>Exemple d\\'appel :</b> ' + esc(p.exemple_call_id) + '</p>' +\n  '<pre style=\"background:#f4f4f4;padding:10px;white-space:pre-wrap\">' + esc(p.correction_prompt) + '</pre>'\n).join('') || '<p>Aucun problème détecté.</p>';\n\nconst demandes = ul((mk.demandes_principales || []).map(d => esc(d.motif) + ' : <b>' + esc(d.nb_appels) + '</b>'));\nconst questions = (mk.questions_frequentes || []).map(q =>\n  '<li><b>' + esc(q.question) + '</b> (' + esc(q.nb_appels) + ')<br><i>Réponse suggérée :</i> ' + esc(q.reponse_suggeree) + '</li>'\n).join('');\nconst opportunites = ul((mk.opportunites || []).map(o => esc(o.description) + ' <small>(' + esc(o.call_id) + ')</small>'));\nconst freins = ul((mk.freins || []).map(esc));\nconst reco = ul((mk.recommandations || []).map(x => '<b>' + esc(x.action) + '</b> : ' + esc(x.pourquoi)));\n\nconst html =\n  '<div style=\"font-family:Arial,sans-serif;max-width:700px\">' +\n  '<h2>Rapport agent vocal - ' + esc(cfg.nom_client) + '</h2>' +\n  '<p>' + esc(r.resume) + '</p>' +\n  '<table cellpadding=\"6\" style=\"border-collapse:collapse;border:1px solid #ddd\">' +\n  '<tr><td>Appels analysés</td><td><b>' + s.nb_appels + '</b></td></tr>' +\n  '<tr><td>Objectif atteint</td><td><b>' + s.objectif_atteint + ' / ' + s.nb_appels + '</b></td></tr>' +\n  '<tr><td>Raccroché par l\\'appelant</td><td><b>' + s.raccroche_par_appelant + '</b></td></tr>' +\n  '<tr><td>Opportunités fortes</td><td><b>' + s.opportunites_fortes + '</b></td></tr>' +\n  '<tr><td>Durée moyenne</td><td><b>' + s.duree_moyenne_s + ' s</b></td></tr>' +\n  '</table>' +\n  '<h2>1. Technique : comportement de l\\'assistante</h2>' +\n  (forts ? '<h3>Points forts</h3>' + forts : '') +\n  '<h3>Problèmes et corrections</h3>' + problemes +\n  '<h2>2. Clients et marketing</h2>' +\n  (mk.profil_clients ? '<p>' + esc(mk.profil_clients) + '</p>' : '') +\n  (demandes ? '<h3>Demandes principales</h3>' + demandes : '') +\n  (questions ? '<h3>Questions fréquentes</h3><ul>' + questions + '</ul>' : '') +\n  (opportunites ? '<h3>Opportunités à rappeler</h3>' + opportunites : '') +\n  (freins ? '<h3>Freins exprimés</h3>' + freins : '') +\n  (reco ? '<h3>Recommandations</h3>' + reco : '') +\n  '</div>';\n\nreturn [{ json: {\n  subject: 'Rapport hebdo agent vocal - ' + cfg.nom_client + ' - ' + s.nb_appels + ' appels',\n  html\n} }];"
+      },
+      "id": "dcc3ab44-bb4c-4a48-9a64-3e846a0601b2",
+      "name": "Construire l'email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Config').first().json.email_destinataire }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "3ada60be-0ff9-4bbc-87f9-b0d3cdafc695",
+      "name": "Envoyer le rapport",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2880,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Test manuel": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chaque lundi 8h": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Retell - List Calls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retell - List Calls": {
+      "main": [
+        [
+          {
+            "node": "Un item par appel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Un item par appel": {
+      "main": [
+        [
+          {
+            "node": "Retell - Get Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retell - Get Call": {
+      "main": [
+        [
+          {
+            "node": "Préparer les appels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer les appels": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Analyse par appel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Analyse par appel": {
+      "main": [
+        [
+          {
+            "node": "Lire les analyses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire les analyses": {
+      "main": [
+        [
+          {
+            "node": "Regrouper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Regrouper": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Synthèse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Synthèse": {
+      "main": [
+        [
+          {
+            "node": "Construire l'email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire l'email": {
+      "main": [
+        [
+          {
+            "node": "Envoyer le rapport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -1,0 +1,59 @@
+{
+  "name": "Retell - SMS résumé",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "retell-post-call",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "webhook-node",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/transactionalSMS/sms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  sender: 'FlowsOps',\n  recipient: 'TECHNICIAN_PHONE_NUMBER',\n  type: 'transactional',\n  content: [\n    'Martin Chauffage',\n    'Type : ' + ($json.body.call.call_analysis.custom_analysis_data.type_appel || 'non precise'),\n    'Nom : ' + ($json.body.call.call_analysis.custom_analysis_data.nom || 'non precise'),\n    'Adresse : ' + ($json.body.call.call_analysis.custom_analysis_data.adresse || 'non precisee'),\n    'Motif : ' + ($json.body.call.call_analysis.custom_analysis_data.probleme || 'non precise'),\n    'Message : ' + ($json.body.call.call_analysis.custom_analysis_data.message || 'aucun'),\n    'RDV : ' + ($json.body.call.call_analysis.custom_analysis_data.creneau_rdv || 'aucun')\n  ].join('\\n')\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "send-sms-node",
+      "name": "Envoyer SMS"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Envoyer SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
