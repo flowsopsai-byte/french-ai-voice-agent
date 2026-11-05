@@ -71,6 +71,8 @@ flowchart LR
 
 ### 1. SMS de résumé après chaque appel
 
+![n8n workflow: summary SMS](n8n-sms-resume.png)
+
 Fichier : [`workflows/retell-sms-resume.sanitized.json`](workflows/retell-sms-resume.sanitized.json), sans données personnelles ni identifiants.
 
 1. Importez le fichier dans n8n.
@@ -80,6 +82,8 @@ Fichier : [`workflows/retell-sms-resume.sanitized.json`](workflows/retell-sms-re
 5. Limitez l'envoi du webhook à l'événement `call_analyzed`.
 
 ### 2. Rapport hebdomadaire d'amélioration
+
+![n8n workflow: weekly report](n8n-rapport-hebdo.png)
 
 Fichier : [`workflows/rapport-hebdo-agent-vocal.json`](workflows/rapport-hebdo-agent-vocal.json).
 
